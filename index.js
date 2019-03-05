@@ -1,22 +1,23 @@
-var webpackHotMiddleware = require('webpack-hot-middleware');
+const webpackHotMiddleware = require('webpack-hot-middleware');
 
 function middleware(doIt, req, res) {
-    var originalEnd = res.end;
-    return function(done) {
+    const originalEnd = res.end;
+    return new Promise((resolve, reject) => {
         res.end = function() {
             originalEnd.apply(this, arguments);
-            done(null, 0);
+            resolve(false);
         };
-        doIt(req, res, function() {
-            done(null, 1);
+        doIt(req, res, function next() {
+            // 走到这里说明 hot-middleware 并没有做处理，因此要进入next中间件
+            resolve(true)
         });
-    };
+    })
 }
 
 module.exports = function(compiler, option) {
-    var action = webpackHotMiddleware(compiler, option);
+    const action = webpackHotMiddleware(compiler, option);
     return function (ctx, next) {
-        var nextStep = yield middleware(action, ctx.req,  ctx.res);
+        const nextStep = await middleware(action, ctx.req, ctx.res);
         if (nextStep && next) {
             next();
         }
